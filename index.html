@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ledger — Money Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f7f5; --ink:#14181c; --ink-soft:#4b5259; --line:#dde1dd;
+  --card:#ffffff; --green:#1f6f4d; --green-soft:#e6f0ea; --gold:#b08d3e; --gold-soft:#f4eedc;
+  --red:#a6432f; --red-soft:#f6e9e5; --radius:12px;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#14181c; --ink:#f0f2f0; --ink-soft:#a3aaa6; --line:#2a2f33;
+    --card:#1b2024; --green:#4ba57e; --green-soft:#1c2c25; --gold:#d3ae5f; --gold-soft:#2b2517;
+    --red:#d9836e; --red-soft:#2e211d;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#14181c; --ink:#f0f2f0; --ink-soft:#a3aaa6; --line:#2a2f33;
+  --card:#1b2024; --green:#4ba57e; --green-soft:#1c2c25; --gold:#d3ae5f; --gold-soft:#2b2517;
+  --red:#d9836e; --red-soft:#2e211d;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px); scroll-behavior:smooth;}
+@media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} *{animation-duration:.01ms !important; transition-duration:.01ms !important;} }
+body{margin:0; background:var(--paper); color:var(--ink); font-family:'Inter',system-ui,sans-serif; min-height:100%; overflow-x:hidden;}
+.wrap{max-width:900px; margin:0 auto; padding:0 20px 60px;}
+nav{position:sticky; top:0; z-index:20; backdrop-filter:blur(10px); background:color-mix(in srgb, var(--paper) 85%, transparent); border-bottom:1px solid var(--line); padding:14px 20px; padding-top:calc(14px + env(safe-area-inset-top,0px)); display:flex; justify-content:space-between; align-items:center;}
+nav .brand{font-family:'Fraunces',serif; font-weight:600; font-size:18px;}
+.theme-btn{border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; font-family:inherit;}
+
+.hero{max-width:900px; margin:0 auto; padding:64px 20px 40px; text-align:center; position:relative;}
+.hero .eyebrow{color:var(--green); font-size:14px; font-weight:600; margin-bottom:10px; opacity:0; animation:fadeUp .7s ease forwards;}
+.hero h1{font-family:'Fraunces',serif; font-weight:700; font-size:clamp(30px,6vw,50px); margin:0 0 14px; letter-spacing:-.02em; line-height:1.05; opacity:0; animation:fadeUp .7s ease .1s forwards;}
+.hero .big-balance{font-family:'JetBrains Mono',monospace; font-size:clamp(38px,9vw,64px); font-weight:600; margin:18px 0 6px; color:var(--green); opacity:0; animation:fadeUp .7s ease .2s forwards;}
+.hero .sub{color:var(--ink-soft); font-size:15px; max-width:440px; margin:0 auto; opacity:0; animation:fadeUp .7s ease .3s forwards;}
+.hero .scroll-cue{margin-top:36px; font-size:12px; color:var(--ink-soft); opacity:0; animation:fadeUp .7s ease .45s forwards, bob 2s ease-in-out 1.5s infinite;}
+@keyframes fadeUp{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:translateY(0);}}
+@keyframes bob{0%,100%{transform:translateY(0);} 50%{transform:translateY(6px);}}
+
+.reveal{opacity:0; transform:translateY(18px); transition:opacity .6s ease, transform .6s ease;}
+.reveal.in{opacity:1; transform:translateY(0);}
+
+section{margin-top:46px;}
+h2.section-title{font-family:'Fraunces',serif; font-weight:600; font-size:22px; margin:0 0 16px;}
+
+.cards{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+@media(max-width:640px){.cards{grid-template-columns:repeat(2,1fr);}}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; transition:transform .25s ease;}
+.card:hover{transform:translateY(-3px);}
+.card .label{font-size:12px; color:var(--ink-soft);}
+.card .num{font-family:'JetBrains Mono',monospace; font-size:21px; font-weight:600; margin-top:4px; letter-spacing:-.02em;}
+.card.income .num{color:var(--green);}
+.card.expense .num{color:var(--red);}
+.card.save .num{color:var(--gold);}
+
+.grid{display:grid; grid-template-columns:340px 1fr; gap:20px; align-items:start;}
+@media(max-width:760px){.grid{grid-template-columns:1fr;}}
+.panel{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:18px;}
+.panel h3{font-family:'Fraunces',serif; font-weight:600; font-size:16px; margin:0 0 14px;}
+
+form{display:flex; flex-direction:column; gap:10px;}
+.row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+label{font-size:12px; color:var(--ink-soft); margin-bottom:4px; display:block;}
+input,select{width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); font-family:'Inter',sans-serif; font-size:14px;}
+input:focus,select:focus,button:focus,.theme-btn:focus{outline:2px solid var(--green); outline-offset:1px;}
+.type-toggle{display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden;}
+.type-toggle button{flex:1; padding:9px 0; border:none; background:var(--paper); color:var(--ink-soft); font-size:13px; cursor:pointer; font-family:inherit;}
+.type-toggle button.active[data-t="income"]{background:var(--green-soft); color:var(--green); font-weight:600;}
+.type-toggle button.active[data-t="expense"]{background:var(--red-soft); color:var(--red); font-weight:600;}
+.submit-btn{margin-top:4px; padding:10px; border:none; border-radius:8px; background:var(--ink); color:var(--paper); font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:transform .15s ease;}
+.submit-btn:active{transform:scale(.97);}
+
+.list-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+.filter{display:flex; gap:6px; flex-wrap:wrap;}
+.filter button{border:1px solid var(--line); background:var(--paper); color:var(--ink-soft); border-radius:20px; padding:4px 11px; font-size:12px; cursor:pointer; font-family:inherit;}
+.filter button.active{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+.txn{display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--line); gap:10px; animation:fadeUp .35s ease;}
+.txn:last-child{border-bottom:none;}
+.txn-left{display:flex; flex-direction:column; min-width:0;}
+.txn-cat{font-size:14px; font-weight:500;}
+.txn-meta{font-size:12px; color:var(--ink-soft); margin-top:2px;}
+.txn-right{display:flex; align-items:center; gap:10px;}
+.txn-amt{font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:600; white-space:nowrap;}
+.txn-amt.income{color:var(--green);}
+.txn-amt.expense{color:var(--red);}
+.del{border:none; background:none; color:var(--ink-soft); cursor:pointer; font-size:16px; line-height:1; padding:2px 4px;}
+.del:hover{color:var(--red);}
+.empty{color:var(--ink-soft); font-size:13px; padding:20px 0; text-align:center;}
+
+.breakdown{margin-top:22px;}
+.bd-row{display:grid; grid-template-columns:90px 1fr 70px; align-items:center; gap:10px; margin-bottom:9px; font-size:13px;}
+.bd-bar{height:8px; background:var(--line); border-radius:4px; overflow:hidden;}
+.bd-fill{height:100%; background:var(--green); border-radius:4px; width:0; transition:width 1s cubic-bezier(.2,.8,.2,1);}
+.bd-amt{font-family:'JetBrains Mono',monospace; text-align:right; font-size:12px; color:var(--ink-soft);}
+
+.report-card{background:linear-gradient(135deg, var(--green-soft), var(--gold-soft)); border:1px solid var(--line); border-radius:var(--radius); padding:28px; text-align:center;}
+.badge{display:inline-block; font-size:12px; font-weight:600; letter-spacing:.02em; padding:6px 14px; border-radius:20px; background:var(--card); border:1px solid var(--line); margin-bottom:14px;}
+.report-card .headline{font-family:'Fraunces',serif; font-weight:600; font-size:24px; margin:0 0 10px; line-height:1.2;}
+.report-card .msg{color:var(--ink-soft); font-size:14px; max-width:460px; margin:0 auto;}
+.rate-bar{max-width:320px; margin:20px auto 4px; height:10px; background:var(--line); border-radius:5px; overflow:hidden;}
+.rate-fill{height:100%; width:0; background:var(--green); border-radius:5px; transition:width 1.2s cubic-bezier(.2,.8,.2,1);}
+.rate-label{font-size:12px; color:var(--ink-soft); margin-top:6px;}
+
+.goal-row{display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:16px;}
+.goal-row .field{flex:1; min-width:160px;}
+.goal-bar{height:14px; background:var(--line); border-radius:7px; overflow:hidden; margin-top:6px;}
+.goal-fill{height:100%; background:var(--gold); border-radius:7px; width:0; transition:width 1s cubic-bezier(.2,.8,.2,1);}
+.goal-text{font-size:13px; color:var(--ink-soft); margin-top:8px;}
+
+.tips{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:18px;}
+@media(max-width:700px){.tips{grid-template-columns:1fr;}}
+.tip{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px; transition:transform .25s ease;}
+.tip:hover{transform:translateY(-3px);}
+.tip .icon{font-size:22px; margin-bottom:8px; display:block;}
+.tip h4{font-family:'Fraunces',serif; font-size:15px; margin:0 0 6px; font-weight:600;}
+.tip p{font-size:13px; color:var(--ink-soft); margin:0; line-height:1.5;}
+.disclaimer{font-size:12px; color:var(--ink-soft); margin-top:14px; text-align:center;}
+
+footer{text-align:center; color:var(--ink-soft); font-size:12px; margin-top:50px; padding-top:20px; border-top:1px solid var(--line);}
+</style>
+</head>
+<body>
+<nav>
+  <div class="brand">Ledger</div>
+  <button class="theme-btn" id="themeBtn" type="button">Dark mode</button>
+</nav>
+
+<div class="hero">
+  <div class="eyebrow">Your money, in one honest view</div>
+  <h1>Know where every rupee goes.</h1>
+  <div class="big-balance" id="heroBalance">₹0</div>
+  <div class="sub">Track salary and income against EMI, rent, food and every other expense — then see a clear picture of your savings and investing habit.</div>
+  <div class="scroll-cue">↓ scroll to add your first entry</div>
+</div>
+
+<div class="wrap">
+
+  <section class="reveal" id="sec-cards">
+    <div class="cards">
+      <div class="card income"><div class="label">Income</div><div class="num" id="totalIncome">₹0</div></div>
+      <div class="card expense"><div class="label">Expenses</div><div class="num" id="totalExpense">₹0</div></div>
+      <div class="card"><div class="label">Balance</div><div class="num" id="balance">₹0</div></div>
+      <div class="card save"><div class="label">Savings + Invest</div><div class="num" id="totalSave">₹0</div></div>
+    </div>
+  </section>
+
+  <section class="reveal" id="sec-form">
+    <h2 class="section-title">Add an entry</h2>
+    <div class="grid">
+      <div class="panel">
+        <form id="txnForm">
+          <div class="type-toggle">
+            <button type="button" data-t="income" class="active">Income</button>
+            <button type="button" data-t="expense">Expense</button>
+          </div>
+          <div>
+            <label for="category">Category</label>
+            <select id="category"></select>
+          </div>
+          <div class="row2">
+            <div>
+              <label for="amount">Amount (₹)</label>
+              <input type="number" id="amount" min="0" step="0.01" required placeholder="0.00">
+            </div>
+            <div>
+              <label for="date">Date</label>
+              <input type="date" id="date" required>
+            </div>
+          </div>
+          <div>
+            <label for="note">Note (optional)</label>
+            <input type="text" id="note" placeholder="e.g. September salary">
+          </div>
+          <button type="submit" class="submit-btn">Add entry</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="list-head">
+          <h3 style="margin:0;">Entries</h3>
+          <div class="filter" id="filter">
+            <button data-f="all" class="active">All</button>
+            <button data-f="income">Income</button>
+            <button data-f="expense">Expense</button>
+          </div>
+        </div>
+        <div class="list" id="list"></div>
+        <div class="breakdown" id="breakdownWrap" style="display:none;">
+          <h3>Where expenses go</h3>
+          <div id="breakdown"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="reveal" id="sec-report">
+    <h2 class="section-title">Your money report</h2>
+    <div class="report-card">
+      <div class="badge" id="reportBadge">Getting started</div>
+      <div class="headline" id="reportHeadline">Add a few entries to see your story.</div>
+      <div class="msg" id="reportMsg">Once you've logged some income and expenses, this turns into a live read on your savings habit.</div>
+      <div class="rate-bar"><div class="rate-fill" id="rateFill"></div></div>
+      <div class="rate-label" id="rateLabel">Savings rate: —</div>
+    </div>
+  </section>
+
+  <section class="reveal" id="sec-goal">
+    <h2 class="section-title">Savings goal</h2>
+    <div class="panel">
+      <div class="goal-row">
+        <div class="field">
+          <label for="goalInput">Monthly savings target (₹)</label>
+          <input type="number" id="goalInput" min="0" step="100" placeholder="e.g. 10000">
+        </div>
+        <button class="submit-btn" id="goalSave" type="button" style="min-width:120px;">Set goal</button>
+      </div>
+      <div class="goal-bar"><div class="goal-fill" id="goalFill"></div></div>
+      <div class="goal-text" id="goalText">Set a target to track progress toward it.</div>
+    </div>
+  </section>
+
+  <section class="reveal" id="sec-tips">
+    <h2 class="section-title">General savings & investing guidelines</h2>
+    <div class="tips">
+      <div class="tip">
+        <span class="icon">🛟</span>
+        <h4>Build an emergency fund first</h4>
+        <p>A common guideline is 3–6 months of essential expenses set aside before investing, so a surprise cost doesn't force you to sell investments early.</p>
+      </div>
+      <div class="tip">
+        <span class="icon">📊</span>
+        <h4>Try the 50/30/20 split</h4>
+        <p>Roughly 50% needs, 30% wants, 20% savings and investing is a widely used starting ratio — adjust it to fit your own EMI and rent load.</p>
+      </div>
+      <div class="tip">
+        <span class="icon">🌱</span>
+        <h4>Consistency beats timing</h4>
+        <p>Investing a fixed amount on a regular schedule (a SIP-style habit) is a well-known way to reduce the stress of guessing market highs and lows.</p>
+      </div>
+    </div>
+    <div class="disclaimer">These are general educational guidelines, not personalized financial advice — consider speaking with a licensed financial advisor for decisions specific to your situation.</div>
+  </section>
+
+  <footer>Stored privately in this browser only — nothing is sent anywhere.</footer>
+</div>
+
+<script>
+const INCOME_CATS = ["Salary","Other Income"];
+const EXPENSE_CATS = ["EMI","Rent","Recharge","Food","Dress","Savings","Investment","Other"];
+const STORAGE_KEY = "ledger_entries_v1";
+const THEME_KEY = "ledger_theme_v1";
+const GOAL_KEY = "ledger_goal_v1";
+
+let entries = [];
+try { entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch(e) { entries = []; }
+let goal = 0;
+try { goal = parseFloat(localStorage.getItem(GOAL_KEY) || "0") || 0; } catch(e) { goal = 0; }
+let currentType = "income";
+let currentFilter = "all";
+
+const $ = id => document.getElementById(id);
+const fmt = n => "₹" + Number(n).toLocaleString('en-IN', {maximumFractionDigits:0});
+
+function populateCategories(){
+  const sel = $("category");
+  sel.innerHTML = "";
+  const cats = currentType === "income" ? INCOME_CATS : EXPENSE_CATS;
+  cats.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
+}
+document.querySelectorAll(".type-toggle button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".type-toggle button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active"); currentType = btn.dataset.t; populateCategories();
+  });
+});
+document.querySelectorAll("#filter button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#filter button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active"); currentFilter = btn.dataset.f; render();
+  });
+});
+$("date").valueAsDate = new Date();
+populateCategories();
+
+$("txnForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const amount = parseFloat($("amount").value);
+  if (!amount || amount <= 0) return;
+  entries.unshift({ id: Date.now(), type: currentType, category: $("category").value, amount, date: $("date").value, note: $("note").value.trim() });
+  save(); $("amount").value = ""; $("note").value = ""; render();
+});
+function removeEntry(id){ entries = entries.filter(e => e.id !== id); save(); render(); }
+function save(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch(e) {} }
+
+$("goalInput").value = goal || "";
+$("goalSave").addEventListener("click", () => {
+  goal = parseFloat($("goalInput").value) || 0;
+  try { localStorage.setItem(GOAL_KEY, String(goal)); } catch(e) {}
+  render();
+});
+
+function badgeFor(rate, hasData){
+  if (!hasData) return { badge:"Getting started", headline:"Add a few entries to see your story.", msg:"Once you've logged some income and expenses, this turns into a live read on your savings habit." };
+  if (rate >= 30) return { badge:"Strong saver", headline:"You're building real momentum.", msg:"You're setting aside a healthy share of your income — keep this pace and compounding does a lot of the work for you over time." };
+  if (rate >= 15) return { badge:"On track", headline:"A solid, steady habit.", msg:"You're saving a reasonable share of what comes in. A small increase toward 20–30% would speed up your longer-term goals." };
+  if (rate >= 0) return { badge:"Room to grow", headline:"Every rupee saved compounds.", msg:"Your savings rate is on the lower side right now. Trimming one recurring expense category is often the fastest way to lift it." };
+  return { badge:"Spending more than you earn", headline:"Let's tighten the gap.", msg:"Expenses are currently outpacing income. Reviewing your largest category below is a good place to start." };
+}
+
+function render(){
+  const income = entries.filter(e => e.type === "income").reduce((s,e)=>s+e.amount,0);
+  const expenseAll = entries.filter(e => e.type === "expense");
+  const expense = expenseAll.reduce((s,e)=>s+e.amount,0);
+  const saveInvest = expenseAll.filter(e => e.category === "Savings" || e.category === "Investment").reduce((s,e)=>s+e.amount,0);
+  const balance = income - expense;
+
+  $("totalIncome").textContent = fmt(income);
+  $("totalExpense").textContent = fmt(expense);
+  $("balance").textContent = fmt(balance);
+  $("totalSave").textContent = fmt(saveInvest);
+  $("heroBalance").textContent = fmt(balance);
+
+  const list = $("list");
+  list.innerHTML = "";
+  const shown = entries.filter(e => currentFilter === "all" || e.type === currentFilter);
+  if (shown.length === 0){ list.innerHTML = '<div class="empty">No entries yet. Add your first one above.</div>'; }
+  else {
+    shown.forEach(e => {
+      const row = document.createElement("div"); row.className = "txn";
+      row.innerHTML = `<div class="txn-left"><div class="txn-cat">${escapeHtml(e.category)}</div><div class="txn-meta">${e.date}${e.note ? " · " + escapeHtml(e.note) : ""}</div></div>
+        <div class="txn-right"><div class="txn-amt ${e.type}">${e.type === "income" ? "+" : "−"}${fmt(e.amount)}</div><button class="del" title="Delete" data-id="${e.id}">✕</button></div>`;
+      list.appendChild(row);
+    });
+    list.querySelectorAll(".del").forEach(b => b.addEventListener("click", () => removeEntry(Number(b.dataset.id))));
+  }
+
+  const bdWrap = $("breakdownWrap"); const bd = $("breakdown"); bd.innerHTML = "";
+  if (expenseAll.length === 0){ bdWrap.style.display = "none"; }
+  else {
+    bdWrap.style.display = "block";
+    const byCat = {};
+    expenseAll.forEach(e => byCat[e.category] = (byCat[e.category]||0) + e.amount);
+    Object.entries(byCat).sort((a,b)=>b[1]-a[1]).forEach(([cat,amt]) => {
+      const pct = Math.round((amt/expense)*100);
+      const row = document.createElement("div"); row.className = "bd-row";
+      row.innerHTML = `<div>${escapeHtml(cat)}</div><div class="bd-bar"><div class="bd-fill" style="width:0"></div></div><div class="bd-amt">${fmt(amt)}</div>`;
+      bd.appendChild(row);
+      requestAnimationFrame(() => row.querySelector(".bd-fill").style.width = pct + "%");
+    });
+  }
+
+  const rate = income > 0 ? Math.round((saveInvest / income) * 100) : (entries.length ? -1 : 0);
+  const hasData = entries.length > 0;
+  const info = badgeFor(rate, hasData);
+  $("reportBadge").textContent = info.badge;
+  $("reportHeadline").textContent = info.headline;
+  $("reportMsg").textContent = info.msg;
+  $("rateLabel").textContent = hasData ? `Savings rate: ${rate}% of income` : "Savings rate: —";
+  requestAnimationFrame(() => $("rateFill").style.width = Math.max(0, Math.min(100, rate)) + "%");
+
+  if (goal > 0){
+    const pct = Math.max(0, Math.min(100, Math.round((saveInvest / goal) * 100)));
+    $("goalText").textContent = `${fmt(saveInvest)} of ${fmt(goal)} saved this period (${pct}%).`;
+    requestAnimationFrame(() => $("goalFill").style.width = pct + "%");
+  } else {
+    $("goalText").textContent = "Set a target to track progress toward it.";
+    $("goalFill").style.width = "0";
+  }
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+const themeBtn = $("themeBtn");
+function applyTheme(t){
+  if (t === "dark"){ document.documentElement.setAttribute("data-theme","dark"); themeBtn.textContent = "Light mode"; }
+  else { document.documentElement.setAttribute("data-theme","light"); themeBtn.textContent = "Dark mode"; }
+}
+let savedTheme = "light";
+try { savedTheme = localStorage.getItem(THEME_KEY) || "light"; } catch(e) {}
+applyTheme(savedTheme);
+themeBtn.addEventListener("click", () => {
+  savedTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+  applyTheme(savedTheme);
+  try { localStorage.setItem(THEME_KEY, savedTheme); } catch(e) {}
+});
+
+const io = new IntersectionObserver((items) => {
+  items.forEach(it => { if (it.isIntersecting){ it.target.classList.add("in"); io.unobserve(it.target); } });
+}, { threshold: 0.15 });
+document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+
+render();
+</script>
+</body>
+</html>
